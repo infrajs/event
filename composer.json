@@ -1,0 +1,10 @@
+{
+	"name": "infrajs/event",
+	"license": "GPL3",
+	"autoload": {
+		"psr-4": { "infrajs\\event\\": "/" }
+	},
+	"require":{
+		"infrajs/ans":"~1"
+	}
+}
