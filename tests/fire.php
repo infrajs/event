@@ -2,7 +2,11 @@
 namespace infrajs\event;
 use infrajs\ans\Ans;
 
-require_once('../../../../vendor/autoload.php');
+if (!is_file('vendor/autoload.php')) {
+	chdir('../../../../');	
+	require_once('vendor/autoload.php');
+}
+
 
 $ans = array();
 $ans['title'] = 'Проверка событий';
@@ -13,6 +17,7 @@ Event::listeng('ontest', function () use (&$val) {
 });
 
 Event::fireg('ontest');
+
 if (!$val) return Ans::err($ans, 'Событие не сработало');
 
 
