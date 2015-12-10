@@ -1,148 +1,194 @@
 <?php
 namespace infrajs\event;
-
+use infrajs\once\Once;
+use infrajs\event\Event;
+/**
+ * 1. Добавляются обработчики Event::handler('question.otherkey.otherkey', $handler, 'selfkey') обработчик запустится с 1 аргументом, проанализировав который обработчик должен сказать null или вернуть значение.
+ * 2. Во втором этапе вызывается Event::handler('question', $obj) и начинают запускаться обработчики. Первый вернувший false ответ остановит очередь. Если обработчики ничего не вернуть is будет возвращать true.
+ * При повторных вызовах возвращается кэш. Очердь одноразовая, простая, быстрая.
+ * При подписки добавляются ключевые слова
+ **/
 class Event {
-	public static $obj = array();
-	public static function fireg($clsfn, $argso = array())
+	private static $list;
+	public static $fire;
+	public static $handler;
+	public static $classes = array();
+	private static function &getList($name) //У одного имени есть два списка. глобальное событие и события alien других объектов 
 	{
-		return static::fire(static::$obj, $clsfn, $argso);
+		$list=&static::$list;
+		if (!isset($list[$name])) {
+			$list[$name] = array(
+				'result'=>array(), //Выполнено событие или нет
+				'list'=>[], //Очередь
+				'keys'=>array(), //Ключи всех подписок с количеством
+				'readyobj'=>array(),//Массив с временными отметками по объектам что выполнено. При равенстве количество с keys. Ключ попадает в массив ready
+				'ready'=>array() //Выполненные ключи
+			);
+		}
+		return $list[$name];
 	}
-	public static function fire(&$obj = null, $clsfn, $argso = array())
+	public static function createContext($name, &$obj, $key='')
 	{
-		if (is_null($obj)) $obj = &static::$obj;
-		if ($obj !== static::$obj) {
-			$clsfn = explode('.', $clsfn);
+		$p=explode(':', $key, 2);
+		$key=$p[0];
+		if (sizeof($p)==2) {
+			$keys = explode(',', $p[1]);
+			//$keys = array_map('trim', $keys);
 		} else {
-			$clsfn = array($clsfn);
+			$keys = array();
 		}
-
-		$cls = (sizeof($clsfn) > 1) ? array_shift($clsfn) : '';
-		$fn = implode('.', $clsfn);
-
-		if ($cls) {
-			$depot = &static::depot(static::$obj, $cls.'.'.$fn);
+		$p=explode('.', $name);
+		if (sizeof($p)>1) {
+			$class=$p[0];
 		} else {
-			$depot = &static::depot($obj, $fn);
-		}
-		$depot['evt'] = array(
-			'context' => &$obj,
-			'args' => array_merge(array(&$obj), $argso),//Аргументы которые передаются в callback
-		);
-		//Если класс, то у непосредственно объекта вообще ничего не храниться
-
-		foreach ($depot['listen'] as &$cal) {
-			static::exec($depot, $cal);
-		}
-	}
-	public static function listeng($fn, $callback)
-	{
-		return static::listen(static::$obj, $fn, $callback);
-	}
-	public static function listen(&$obj = null, $fn, $callback)
-	{
-		if (is_null($obj)) $obj = &static::$obj;
-		$depot = &static::depot($obj, $fn);
-		$depot['listen'][] = $callback;
-	}
-	public static function wheng($fn, $callback)
-	{
-		return static::when(static::$obj, $fn, $callback);
-	}
-	public static function when(&$obj, $fn, $callback)
-	{
-		if (is_null($obj)) $obj = &static::$obj;
-		//depricated, для классов не подходит
-		$depot = &static::depot($obj, $fn);
-		$cal = function () use (&$depot) {
-			foreach ($depot['wait'] as $k => $cal) {
-				unset($depot['wait'][$k][0]);//должно удалиться и в listen так как ссылка;
-
-				static::exec($depot, $depot['wait'][$k][1]);
-				unset($depot['wait'][$k]);
-				break;
+			if ($obj) {
+				$name='alien.'.$name;
+				$class='alien';
+			} else {
+				$class='';
 			}
-		};
-		$depot['wait'][] = array(&$cal,&$callback);
-		$depot['listen'][] = &$cal;
-	}
-	public static function waitg($fn, $callback)
-	{
-		return static::wait(static::$obj, $fn, $callback);
-	}
-	public static function wait(&$obj, $fn, $callback)
-	{
-		if (is_null($obj)) $obj = &static::$obj;
-		//depricated, для классов не подходит
-		$depot = &static::depot($obj, $fn);
-		if ($depot['evt']) {
-			static::exec($depot, $callback);
+		}
+		if ($class) {
+			$keys[]=$class;
+		}
+		$classes=static::$classes;
+		if (isset($classes[$class])&&is_array($obj)) {
+			$objid = $classes[$class]($obj);
 		} else {
-			$cal = function () use (&$depot) {
-				foreach ($depot['wait'] as $k => $cal) {
-					unset($depot['wait'][$k][0]);//должно удалиться и в listen так как ссылка;
+			$objid = '';
+		}
+		$handler=array(
+			'key' => trim($key),
+			'executed' => false,
+			'name' => $name,
+			'class' => $class,
+			'keys' => $keys,
+			'obj' => &$obj,
+			'objid' => $objid
+		);
+		return $handler;
+	}
+	public static function handler($name, $callback, $key=null, &$obj=null)
+	{
 
-					static::exec($depot, $depot['wait'][$k][1]);
-					unset($depot['wait'][$k]);
-					break;
+		$handler = static::createContext($name, $obj, $key);
+		$handler['callback'] = $callback;
+		$list=&static::getList($handler['name']);
+		$list['list'][] = $handler;
+
+		
+		if (!isset($list['keys'][$handler['key']])) {
+			$list['keys'][$handler['key']]=0;
+		}
+		$list['keys'][$handler['key']]++; //Сосчитали все ключи
+		
+		/**
+		 * Если все подписки имею ключи и нет ниодного выполненного ключа, то будет выполнена первая подписка в очереди.
+		 **/
+
+		if (isset($list['result'][$handler['objid']])) throw new \Exception('Подписка на совершённое событие');
+	}
+	
+	
+	/**
+	 * Одно событие для одного объекта генерируется один раз
+	 **/
+	public static function fire($name, &$obj=null)
+	{
+		/**
+		 * Уникальность очереди событий определяется именем события содержащей имя класса события.
+		 * Все подписки хранятся в классе и объект не меняется
+		 **/
+		$fire = static::createContext($name, $obj);
+		$list = &Event::getList($fire['name']);
+
+		
+		if (isset($list['result'][$fire['objid']])) {
+			return $list['result'][$fire['objid']];
+		}
+		if (!isset($list['ready'][$fire['objid']])) {
+			$list['ready'][$fire['objid']]=array();
+		}
+		if (isset($list['readyobj'][$fire['objid']])) {
+			$list['readyobj'][$fire['objid']]=array();
+		}
+		
+
+		//Подписка в подписке
+		//$list['result'][$fire['objid']] = $fire;
+		//Генерация события в подписке
+		
+		for ($i = 0, $l = sizeof($list['list']);  $i < $l; $i++) { //Подписка на ходу
+			$handler=&$list['list'][$i];
+			$handler['keys']=array_intersect($handler['keys'], array_keys($list['keys'])); //Убрали ключи которых вообще нет
+		}
+		$r=Event::run($fire, $list);
+		if (is_null($r) || $r) $r = true;
+		else $r = false;
+
+		$list['result'][$fire['objid']] = $r;
+
+		return $list['result'][$fire['objid']];
+		
+	}
+	private static function run(&$fire, &$list)
+	{
+		$omit = false;
+
+		for ($i = 0; $i < sizeof($list['list']); $i++) { //Подписка на ходу
+			$handler=&$list['list'][$i];
+
+			if ($handler['executed']) continue;
+			
+			if(!is_null($handler['obj']) && $handler['objid']!==$fire['objid'] ) {
+				continue;
+			} else {
+				//Объекта у подписки не указан
+				//fire с объктом, подписка без объекта
+				//подписка должна выполниться для всех объектов fire. Проходим дальше
+			}
+
+			$iskeys = array_diff($handler['keys'], $list['ready'][$fire['objid']]); //Проверили выполнены ли все существующие ключи
+			
+			if (sizeof($iskeys) && (sizeof($iskeys)!=1 || is_null($handler['key']) || !in_array($handler['key'], $handler['keys']))) {
+				$omit=$iskeys;
+				continue; //Найден неудовлетворённый ключ.. может быть выход из цикла и на ислкючение
+			}
+
+			if(!is_null($handler['key'])) {
+				//Если есть ключ и его ещё не было
+				if(!in_array($handler['key'], $list['ready'][$fire['objid']])) {
+					if(!isset($list['readyobj'][$fire['objid']][$handler['key']])){
+						$list['readyobj'][$fire['objid']][$handler['key']] = 0;
+					}
+					$list['readyobj'][$fire['objid']][$handler['key']]++;
+					//Если выполнено по объекту столько же сколько всего обработчиков
+					if($list['readyobj'][$fire['objid']][$handler['key']]===$list['keys'][$handler['key']]) {
+						$list['ready'][$fire['objid']][]=$handler['key'];
+					}
 				}
-			};
-
-			$depot['wait'][] = array(&$cal,&$callback);
-			$depot['listen'][] = &$cal;
-		}
-	}
-	public static function handleg($fn, $callback)
-	{
-		return static::handle(static::$obj, $fn, $callback);
-	}
-	public static function handle(&$obj, $fn, &$callback)
-	{
-		if (is_null($obj)) $obj = &static::$obj;
-		//depricated, для классов не подходит
-		$depot = static::depot($obj, $fn);
-		if ($depot['evt']) {
-			static::exec($depot, $callback);
-		}
-		$depot['listen'][] = $callback;
-	}
-	public static function unlisteng($fn, $callback)
-	{
-		return static::unlisten(static::$obj, $fn, $callback);
-	}
-	public static function unlisten(&$obj, $fn, &$callback)
-	{
-		if (is_null($obj)) $obj = &static::$obj;
-		$depot = static::depot($obj, $fn);
-		foreach ($depot['listen'] as &$cal) {
-			if ($cal === $callback) {
-				unset($cal);
 			}
-			break;
-		}
-	}
-	public static function &depot(&$obj, $fn)
-	{
-		if (is_null($obj)) $obj = &static::$obj;
-		$n = '__event_depot__';
-		if (!isset($obj[$n])) {
-			$obj[$n] = array();
-		}
-		if (!isset($obj[$n][$fn])) {
-			$obj[$n][$fn] = array(//При повторном событии этот массив уже будет создан
-			'listen' => array(),//Массив всех подписчиков
-			'wait' => array(),
-			'evt' => null,//Событие ещё не состоялось, обновляется при каждом событии
-		);
-		}
 
-		return $obj[$n][$fn];
-	}
-	public static function exec(&$depot, &$callback)
-	{
-		$r = call_user_func_array($callback, $depot['evt']['args']);
-		if (!is_null($r)) {
-			$depot['free'] = false;//Метка что событие оборвалось
+			$handler['executed'] = true;
+			Event::$fire = $fire;
+			Event::$handler = $handler;
+
+			$r = $handler['callback']($fire['obj']);
+
+			if (!is_null($r) && !$r) {
+				$handler['executed'] = false;
+				return $r;
+			}
+
+			$r=Event::run($fire, $list);
+			$handler['executed'] = false;
 			return $r;
+
 		}
+		if ($omit) throw new \Exception('Рекурсивная зависимость подписчиков. '.implode(',', $omit));
 	}
 }
+
+Event::$classes['alien'] = function($obj){
+	return '';
+};
