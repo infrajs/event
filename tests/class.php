@@ -28,21 +28,21 @@ if($test!='ab'||!$r) return Ans::err($ans,'Событие с объектом '.
 
 
 
-$obj1=array('unick'=>1);
-$obj2=array('unick'=>2);
-$obj3=array('unick'=>3);
+$obj1=array('id'=>1);
+$obj2=array('id'=>2);
+$obj3=array('id'=>3);
 Event::$classes['layer']=function($obj){
-	return $obj['unick'];
+	return $obj['id'];
 };
 
 $test = '';
 Event::handler('layer.ontest', function (&$obj) use (&$test, &$obj2) {
-	$test.=$obj['unick'];
-	if($obj['unick']==$obj2['unick']){
+	$test.=$obj['id'];
+	if($obj['id']==$obj2['id']){
 		if(!Event::isEqual($obj, $obj2)) return;
 	}
-	if($obj['unick']===1) return false;
-	$test.=$obj['unick'];
+	if($obj['id']===1) return false;
+	$test.=$obj['id'];
 });
 
 

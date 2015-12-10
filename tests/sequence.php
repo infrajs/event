@@ -11,21 +11,21 @@ if (!is_file('vendor/autoload.php')) {
 $ans = array();
 $ans['title'] = 'Последовательность событий';
 
-$obj1=array('unick'=>'a');
-$obj2=array('unick'=>'b');
+$obj1=array('id'=>'a');
+$obj2=array('id'=>'b');
 Event::$classes['layer'] = function ($obj) {
-	return $obj['unick'];
+	return $obj['id'];
 };
 
 
 
 $test = '';
 Event::handler('layer.oncheck', function (&$obj) use (&$test) {
-	$test.='2:'.$obj['unick']."#";
+	$test.='2:'.$obj['id']."#";
 
 },'env:external');
 Event::handler('layer.oncheck', function (&$obj) use (&$test) {
-	$test.='1:'.$obj['unick'].'-';
+	$test.='1:'.$obj['id'].'-';
 },'external');
 
 Event::fire('layer.oncheck', $obj1);

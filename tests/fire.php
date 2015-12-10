@@ -67,10 +67,10 @@ if (implode('', $test)!=='1203') return Ans::err($ans, 'Некорректный
 
 
 $test=[];
-$obj1=array('unick'=>1);
-$obj2=array('unick'=>2);
+$obj1=array('id'=>1);
+$obj2=array('id'=>2);
 Event::$classes['cls']=function ($obj) {
-	return $obj['unick'];
+	return $obj['id'];
 };
 
 Event::handler('cls.event', function () use (&$test){
