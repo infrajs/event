@@ -59,7 +59,7 @@ class Event {
 		}
 		$handler=array(
 			'key' => trim($key),
-			'executed' => false,
+			'executed' => array(),
 			'name' => $name,
 			'class' => $class,
 			'keys' => $keys,
@@ -86,7 +86,12 @@ class Event {
 		 * Если все подписки имею ключи и нет ниодного выполненного ключа, то будет выполнена первая подписка в очереди.
 		 **/
 
-		if (isset($list['result'][$handler['objid']])) throw new \Exception('Подписка на совершённое событие');
+		if (isset($list['result'][$handler['objid']])) {
+			echo '<pre>';
+			print_r($handler);
+			print_r($list);
+			throw new \Exception('Подписка на совершённое событие');
+		}
 	}
 	
 	
@@ -99,9 +104,12 @@ class Event {
 		 * Уникальность очереди событий определяется именем события содержащей имя класса события.
 		 * Все подписки хранятся в классе и объект не меняется
 		 **/
+
+
 		$fire = static::createContext($name, $obj);
 		$list = &Event::getList($fire['name']);
 
+		
 		
 		if (isset($list['result'][$fire['objid']])) {
 			return $list['result'][$fire['objid']];
@@ -138,7 +146,7 @@ class Event {
 		for ($i = 0; $i < sizeof($list['list']); $i++) { //Подписка на ходу
 			$handler=&$list['list'][$i];
 
-			if ($handler['executed']) continue;
+			if (!empty($handler['executed'][$fire['objid']])) continue;
 			
 			if(!is_null($handler['obj']) && $handler['objid']!==$fire['objid'] ) {
 				continue;
@@ -151,7 +159,7 @@ class Event {
 			$iskeys = array_diff($handler['keys'], $list['ready'][$fire['objid']]); //Проверили выполнены ли все существующие ключи
 			
 			if (sizeof($iskeys) && (sizeof($iskeys)!=1 || is_null($handler['key']) || !in_array($handler['key'], $handler['keys']))) {
-				$omit=$iskeys;
+				$omit=array('keys'=>$iskeys,'handler'=>$handler);
 				continue; //Найден неудовлетворённый ключ.. может быть выход из цикла и на ислкючение
 			}
 
@@ -169,23 +177,24 @@ class Event {
 				}
 			}
 
-			$handler['executed'] = true;
+			$handler['executed'][$fire['objid']] = true;
 			Event::$fire = $fire;
 			Event::$handler = $handler;
-
 			$r = $handler['callback']($fire['obj']);
-
-			if (!is_null($r) && !$r) {
-				$handler['executed'] = false;
-				return $r;
-			}
+			if (!is_null($r) && !$r) return $r;
 
 			$r=Event::run($fire, $list);
-			$handler['executed'] = false;
 			return $r;
 
 		}
-		if ($omit) throw new \Exception('Рекурсивная зависимость подписчиков. '.implode(',', $omit));
+		if ($omit) {
+			echo '<pre>';
+			unset($fire['obj']);
+			print_r($omit);
+			echo '<hr>';
+			print_r($list);
+			throw new \Exception('Рекурсивная зависимость подписчиков. '.implode(',', $omit['keys']));
+		}
 	}
 }
 
