@@ -1,6 +1,7 @@
 <?php
 namespace infrajs\event;
 use infrajs\ans\Ans;
+use infrajs\infra\Each;
 
 if (!is_file('vendor/autoload.php')) {
 	chdir('../../../../');	
@@ -39,7 +40,7 @@ $test = '';
 Event::handler('layer.ontest', function (&$obj) use (&$test, &$obj2) {
 	$test.=$obj['id'];
 	if($obj['id']==$obj2['id']){
-		if(!Event::isEqual($obj, $obj2)) return;
+		if(!Each::isEqual($obj, $obj2)) return;
 	}
 	if($obj['id']===1) return false;
 	$test.=$obj['id'];

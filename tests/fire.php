@@ -12,11 +12,11 @@ $ans['title'] = 'Проверка событий';
 
 
 $val = false;
-Event::handler('ontest', function () use (&$val) {
+Event::handler('ontestfire', function () use (&$val) {
 	$val = true;
 });
 
-Event::fire('ontest');
+Event::fire('ontestfire');
 
 if (!$val) return Ans::err($ans, 'Событие не сработало');
 

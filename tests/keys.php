@@ -12,33 +12,33 @@ $ans['title'] = 'Проверка ключей событий';
 
 
 $test = '';
-Event::handler('ontest', function () use (&$test) {
+Event::handler('ontestkeys', function () use (&$test) {
 	$test .= 3;
 },'some:test');
-Event::handler('ontest', function () use (&$test) {
+Event::handler('ontestkeys', function () use (&$test) {
 	$test .= 1;
 },'test');
-Event::handler('ontest', function () use (&$test) {
+Event::handler('ontestkeys', function () use (&$test) {
 	$test .= 2;
 },'test');
-Event::fire('ontest');
+Event::fire('ontestkeys');
 if ($test!='123') return Ans::err($ans, 'Группа событий не сработало в нужном порядке '.$test);
 
 
 
 $test = '';
-Event::handler('oh.ontest', function () use (&$test) {
+Event::handler('oh.ontestkeys', function () use (&$test) {
 	$test .= 2;
 });
-Event::handler('oh.ontest', function () use (&$test) {
+Event::handler('oh.ontestkeys', function () use (&$test) {
 	$test .= 3;
 },'test');
-Event::handler('oh.ontest', function () use (&$test) {
+Event::handler('oh.ontestkeys', function () use (&$test) {
 	$test .= 1;
 },'oh');
 
 
-Event::fire('oh.ontest');
+Event::fire('oh.ontestkeys');
 
 if ($test!='123') return Ans::err($ans, 'Имя класса - ключ по умаолчанию '.$test);
 

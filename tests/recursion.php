@@ -14,13 +14,13 @@ $ans['title'] = 'Рекурсия в событиях';
 
 
 $test = '';
-Event::handler('ontest', function () use (&$test) {
-	Event::handler('ontest', function () use (&$test) {
+Event::handler('ontestrec', function () use (&$test) {
+	Event::handler('ontestrec', function () use (&$test) {
 		$test.='b';
 	});
 	$test.='a';
 });
-$r=Event::fire('ontest');
+$r=Event::fire('ontestrec');
 if($test!='ab'||!$r) return Ans::err($ans,'Вложенная подписка '.$test);
 
 
