@@ -1,0 +1,6 @@
+{
+	"event":{
+		"debug":true,
+		"require":"*event/infra.php"
+	}
+}

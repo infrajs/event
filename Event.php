@@ -13,6 +13,9 @@ class Event {
 	public static $fire;
 	public static $handler;
 	public static $classes = array();
+	public static $conf = array(
+		"debug" => true
+	);
 	private static function &getList($name) //У одного имени есть два списка. глобальное событие и события alien других объектов 
 	{
 		$list=&static::$list;
@@ -87,9 +90,11 @@ class Event {
 		 **/
 
 		if (isset($list['result'][$handler['objid']])) {
-			echo '<pre>';
-			print_r($handler);
-			print_r($list);
+			if(Event::$conf['debug']) {
+				echo '<pre>';
+				print_r($handler);
+				print_r($list);
+			}
 			throw new \Exception('Подписка на совершённое событие');
 		}
 	}
@@ -188,11 +193,13 @@ class Event {
 
 		}
 		if ($omit) {
-			echo '<pre>';
-			unset($fire['obj']);
-			print_r($omit);
-			echo '<hr>';
-			print_r($list);
+			if(Event::$conf['debug']) {
+				echo '<pre>';
+				unset($fire['obj']);
+				print_r($omit);
+				echo '<hr>';
+				print_r($list);
+			}
 			throw new \Exception('Рекурсивная зависимость подписчиков. '.implode(',', $omit['keys']));
 		}
 	}
