@@ -1,6 +1,7 @@
 {
 	"event":{
+		"js":"-event/event.js",
 		"debug":true,
-		"require":"*event/infra.php"
+		"require":"-event/infra.php"
 	}
 }
