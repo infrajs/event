@@ -1,7 +1,4 @@
 {
-	"event":{
-		"js":"-event/event.js",
-		"debug":true,
-		"require":"-event/infra.php"
-	}
+	"conf":"\\infrajs\\event\\Event",
+	"js":"event.js"
 }
