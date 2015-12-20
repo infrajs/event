@@ -8,6 +8,7 @@ use infrajs\event\Event;
  * При повторных вызовах возвращается кэш. Очердь одноразовая, простая, быстрая.
  * При подписки добавляются ключевые слова
  **/
+
 class Event {
 	private static $list;
 	public static $fire;
