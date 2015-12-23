@@ -1,7 +1,7 @@
 /*
 1 будущее событие
 */
-define('?-event/event.js', function () {
+define('/-event/event.js', function () {
 	console.log('event defined');
 	infra.fire=function(obj,clsfn,argso){
 		if(obj!==infra) clsfn=clsfn.split('.');
