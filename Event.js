@@ -96,7 +96,7 @@
 				ready=true;
 				return callback();
 			}, key, obj);
-		}
+		},
 		handler: function (name, callback, key, obj)
 		{
 
@@ -166,7 +166,7 @@
 			}*/
 
 			var r = this.execute(fire, list);
-			if (this.is(r))) r = true;
+			if (this.is(r)) r = true;
 			else r = false;
 
 			list['result'][fire['objid']] = r;
