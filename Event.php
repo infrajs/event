@@ -100,6 +100,7 @@ class Event {
 	
 	/**
 	 * Одно событие для одного объекта генерируется один раз
+	 * fire('layer.onshow', $layer);
 	 **/
 	public static function fire($name, &$obj=null)
 	{

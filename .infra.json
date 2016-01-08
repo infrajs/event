@@ -1,5 +1,6 @@
 {
 	"conf":"\\infrajs\\event\\Event",
-	"js":"event.js",
+	"js":"Event.js",
+	"testerjs":"test.js",
 	"require":"infra.php"
 }
