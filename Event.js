@@ -16,6 +16,17 @@
 		 * У одного имени есть два списка. глобальное событие и события alien других объектов 
 		 * Если событию obj не передан и нет точки в имени события то это глобальное событие
 		 **/
+		classlist:{},
+		getClassList: function (name) 
+		{
+			var list=this.classlist;
+			if (!list[name]) {
+				list[name] = {
+					"list":[]
+				}
+			}
+			return list[name];
+		},
 		getList: function (name) 
 		{
 			var list=this.list;
@@ -41,8 +52,11 @@
 			handler['callback'] = callback;
 			
 			handler.list['list'].push(handler);
-			if (!handler.list['keys'][handler['key']]) handler.list['keys'][handler['key']] = 1;
-			else handler.list['keys'][handler['key']]++; //Сосчитали все ключи
+			handler.classlist['list'].push(handler);
+			if (handler['key']) {
+				if (!handler.list['keys'][handler['key']]) handler.list['keys'][handler['key']] = 1;
+				else handler.list['keys'][handler['key']]++; //Сосчитали все ключи
+			}
 
 			return handler;
 		},
@@ -65,11 +79,16 @@
 				cls = '';
 				if (obj) throw 'Для события с объектом класс обязателен';
 			}
-			if (cls) { //одноимённый с классом ключ есть всегда. Вроде того что у класса есть свои собственные обработчики котоорые должны сработать первыми.
+			if (cls) { 
+				//одноимённый с классом ключ есть всегда. 
+				//Вроде того что у класса есть свои собственные обработчики котоорые должны сработать первыми.
+				//Если в качестве ключе указать название класса этот обработчик всегда будет первым
 				keys.push(cls);
 			}
+
+			var classlist=this.getClassList(cls);
+
 			var classes = this.classes;
-			
 			var objid = obj ? classes[cls](obj) : '';
 			
 			var context= {
@@ -80,7 +99,8 @@
 				'keys': keys,
 				'obj': obj,
 				'objid': objid,
-				'list':this.getList(name)
+				'list':this.getList(name),
+				'classlist':classlist
 			};
 			return context;
 		},
@@ -91,7 +111,16 @@
 		one: function(name, callback, key, obj)
 		{
 			var ready=false;
-			return this.handler(name, function(){
+			this.handler(name, function(){
+				if (ready) return;
+				ready=true;
+				return callback();
+			}, key, obj);
+		},
+		onext: function(name, callback, key, obj)
+		{
+			var ready=false;
+			this.createHandler(name, function(){
 				if (ready) return;
 				ready=true;
 				return callback();
@@ -101,21 +130,23 @@
 		{
 
 			var handler = this.createHandler(name, callback, key, obj);
-			
-			/**
-			 * TODO исключить что событие выполняется сейчас
-			 **/
-			if (obj) { //Подписка на совершённое событие
+
+			if (obj) { 
 				if (handler.list['result'][handler['objid']]) {
+					//Метка result появляется когда очередь уже выполнена иначе событие выполнится в общем порядке
+					//Подписка на совершённое событие 
 					callback(obj); //Подписка на конкретный объект
 				}
 			} else { //Подписка на все объекты
-				for (var i in handler.list['result']) {
-					callback(list['result'][i]['obj']);
+				for (var i in handler.list['result']) { //срабатывает для уже обработанных объектов
+					callback(handler.list['result'][i]['obj']);
 				}
 			}
 		},
-		tik: function (name)
+		clear: function (name) {
+			this.tik(name, true);
+		},
+		tik: function (name, clear)
 		{
 			/**
 			 * Режим повторения, сбросить что есть и начать заного.
@@ -127,15 +158,30 @@
 				}
 				return;
 			}
-			var fire=this.createContext(name);
-			var list = this.getList(fire['name']);
-			for (var i=0, l=list['list'].length; i < l; i++) {
-				var handler=list['list'][i];
-				handler['executed']={};
+			
+			
+			if (this.classlist[name]) {
+				var list = this.getClassList(name);
+				for (var i=0, l=list['list'].length; i < l; i++) {
+					var handler=list['list'][i];
+					handler['executed']={};
+					handler.list['result']={}; //Выполнено событие или нет
+					handler.list['readyobj']={};//Массив с временными отметками по объектам что выполнено. При равенстве количество с keys. Ключ попадает в массив ready
+					handler.list['readykeys']={}; //Выполненные ключи
+				}
+				if (clear) list.list=[];
 			}
-			list['result']={}; //Выполнено событие или нет
-			list['readyobj']={};//Массив с временными отметками по объектам что выполнено. При равенстве количество с keys. Ключ попадает в массив ready
-			list['readykeys']={}; //Выполненные ключи
+			if (this.list[name]) {
+				var list = this.getList(name);
+				for (var i=0, l=list['list'].length; i < l; i++) {
+					var handler=list['list'][i];
+					handler['executed']={};
+				}
+				list['result']={}; //Выполнено событие или нет
+				list['readyobj']={};//Массив с временными отметками по объектам что выполнено. При равенстве количество с keys. Ключ попадает в массив ready
+				list['readykeys']={}; //Выполненные ключи
+				if (clear) list.list=[];
+			}
 		},
 		fire: function (name, obj)
 		{
@@ -158,12 +204,12 @@
 			
 			
 			// TODO: проверить обработку несуществующих ключей
-			/*for (var i = 0, l = list['list'].length;  i < l; i++) { //Подписка на ходу
+			for (var i = 0, l = list['list'].length;  i < l; i++) { //Подписка на ходу
 				handler = list['list'][i];
-				handler['keys']=handler['keys'].filter(function(n) { //Из условия подписчика убраны несуществующие ключи
+				handler['keystik']=handler['keys'].filter(function(n) { //Из условия подписчика убраны несуществующие ключи
 					return !!list['keys'][n];
 				});
-			}*/
+			}
 
 			var r = this.execute(fire, list);
 			if (this.is(r)) r = true;
@@ -191,10 +237,10 @@
 					//подписка должна выполниться для всех объектов fire. Проходим дальше
 				}
 
-				var iskeys = handler['keys'].filter( function (n) { //Массив невыполненных ключей
+				var iskeys = handler['keystik'].filter( function (n) { //Массив невыполненных ключей
 					return list['readykeys'][fire['objid']].indexOf(n) === -1; //Проверили выполнены ли все существующие ключи
 				});
-				if (iskeys.length && (iskeys.length!=1 || !handler['key'] || handler['keys'].indexOf(handler['key']) === -1 )) { // Подписка key:key сработает так как сама она удовлетворяет ключ key
+				if (iskeys.length && (iskeys.length!=1 || !handler['key'] || handler['keystik'].indexOf(handler['key']) === -1)) { // Подписка key:key сработает так как сама она удовлетворяет ключ key
 					omit = {
 						'keys': iskeys,
 						'handler': handler
@@ -228,6 +274,7 @@
 
 			}
 			if (omit) {
+				console.log(omit);
 				throw 'Рекурсивная зависимость подписчиков. '+omit['keys'].join(',');
 			}
 		}
