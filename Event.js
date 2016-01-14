@@ -16,17 +16,6 @@
 		 * У одного имени есть два списка. глобальное событие и события alien других объектов 
 		 * Если событию obj не передан и нет точки в имени события то это глобальное событие
 		 **/
-		classlist:{},
-		getClassList: function (name) 
-		{
-			var list=this.classlist;
-			if (!list[name]) {
-				list[name] = {
-					"list":[]
-				}
-			}
-			return list[name];
-		},
 		getList: function (name) 
 		{
 			var list=this.list;
@@ -44,6 +33,10 @@
 		createFire: function (name, obj) 
 		{
 			var fire=this.createContext(name, obj);
+			if(typeof(fire.objid)=='undefined'){
+				console.log(fire);
+				throw 'wtf';
+			}
 			return fire;
 		},
 		createHandler: function (name, callback, key, obj) 
@@ -52,10 +45,9 @@
 			handler['callback'] = callback;
 			
 			handler.list['list'].push(handler);
-			handler.classlist['list'].push(handler);
 			if (handler['key']) {
-				if (!handler.list['keys'][handler['key']]) handler.list['keys'][handler['key']] = 1;
-				else handler.list['keys'][handler['key']]++; //Сосчитали все ключи
+				if (!handler.list['keys'][handler['key']]) handler.list['keys'][handler['key']] = [handler];
+				else handler.list['keys'][handler['key']].push(handler); //Сосчитали все ключи
 			}
 
 			return handler;
@@ -86,11 +78,10 @@
 				keys.push(cls);
 			}
 
-			var classlist=this.getClassList(cls);
-
 			var classes = this.classes;
 			var objid = obj ? classes[cls](obj) : '';
-			
+			var list=this.getList(name);
+			list['class']=cls;
 			var context= {
 				'key' : key,
 				'executed' : {},
@@ -99,9 +90,9 @@
 				'keys': keys,
 				'obj': obj,
 				'objid': objid,
-				'list':this.getList(name),
-				'classlist':classlist
+				'list':list
 			};
+			
 			return context;
 		},
 		is: function(r){
@@ -152,27 +143,14 @@
 			 * Режим повторения, сбросить что есть и начать заного.
 			 * Передаётся класс или имя
 			 **/
-			if(!name) {
+			if (!name) {
 				for (name in this.list) {
 					this.tik(name);
 				}
 				return;
 			}
-			
-			
-			if (this.classlist[name]) {
-				var list = this.getClassList(name);
-				for (var i=0, l=list['list'].length; i < l; i++) {
-					var handler=list['list'][i];
-					handler['executed']={};
-					handler.list['result']={}; //Выполнено событие или нет
-					handler.list['readyobj']={};//Массив с временными отметками по объектам что выполнено. При равенстве количество с keys. Ключ попадает в массив ready
-					handler.list['readykeys']={}; //Выполненные ключи
-				}
-				if (clear) list.list=[];
-			}
 			if (this.list[name]) {
-				var list = this.getList(name);
+				var list = this.list[name];
 				for (var i=0, l=list['list'].length; i < l; i++) {
 					var handler=list['list'][i];
 					handler['executed']={};
@@ -180,7 +158,15 @@
 				list['result']={}; //Выполнено событие или нет
 				list['readyobj']={};//Массив с временными отметками по объектам что выполнено. При равенстве количество с keys. Ключ попадает в массив ready
 				list['readykeys']={}; //Выполненные ключи
-				if (clear) list.list=[];
+				if (clear) {
+					list['keys'] = {};
+					list['list'] = [];
+				}
+			} else {
+				for(var i in this.list) {
+					if (this.list[i]["class"] != name) continue;
+					this.tik(i, clear);
+				}
 			}
 		},
 		fire: function (name, obj)
@@ -197,24 +183,27 @@
 			/**
 			 * TODO: Реализация is isshow... нужно сбрасывать события
 			 **/
-			if (list['result'][fire['objid']]) return list['result'][fire['objid']];
+			if (typeof(list['result'][fire['objid']]) != 'undefined') return list['result'][fire['objid']];
+			list['result'][fire['objid']] = true; //Защита от рекурсий вложенный вызов вернёт true
 
 			if (!list['readykeys'][fire['objid']]) list['readykeys'][fire['objid']]=[];
-			if (list['readyobj'][fire['objid']]) list['readyobj'][fire['objid']]={};
+			if (!list['readyobj'][fire['objid']]) list['readyobj'][fire['objid']]={};
 			
 			
 			// TODO: проверить обработку несуществующих ключей
+
 			for (var i = 0, l = list['list'].length;  i < l; i++) { //Подписка на ходу
 				handler = list['list'][i];
 				handler['keystik']=handler['keys'].filter(function(n) { //Из условия подписчика убраны несуществующие ключи
-					return !!list['keys'][n];
+					if (!list['keys'][n]) return false;
+					if (!list['keys'][n].length) return false;
+					return true;
 				});
 			}
 
 			var r = this.execute(fire, list);
 			if (this.is(r)) r = true;
 			else r = false;
-
 			list['result'][fire['objid']] = r;
 			return list['result'][fire['objid']];
 		},
@@ -225,7 +214,7 @@
 			for (var i = 0; i < list['list'].length; i++) { //Подписка на ходу возможна length изменится
 				var handler=list['list'][i];
 				
-
+				
 				//Для каждого объекта метка о выполнении текущего обработчика
 				if (handler['executed'][fire['objid']]) continue; 
 				
@@ -243,23 +232,27 @@
 				if (iskeys.length && (iskeys.length!=1 || !handler['key'] || handler['keystik'].indexOf(handler['key']) === -1)) { // Подписка key:key сработает так как сама она удовлетворяет ключ key
 					omit = {
 						'keys': iskeys,
+						'fire': fire,	
 						'handler': handler
 					};
 					continue; //Найден неудовлетворённый ключ.. может быть выход из цикла и на ислкючение
 				}
+				//if(fire['objid']==4 && fire['name']=='layer.isshow') {
+				//	console.log(handler);
+				//}
+				if (!list['readyobj'][fire['objid']][handler['key']]) list['readyobj'][fire['objid']][handler['key']] = 0;
+				list['readyobj'][fire['objid']][handler['key']]++;
 
 				if (handler['key']) {//Если есть ключ
 					if (list['readykeys'][fire['objid']].indexOf(handler['key']) === -1) { //И этого ключа ещё не было
 
-						if (!list['readyobj'][fire['objid']])list['readyobj'][fire['objid']]={};
-						if (!list['readyobj'][fire['objid']][handler['key']]) list['readyobj'][fire['objid']][handler['key']] = 0;
-						list['readyobj'][fire['objid']][handler['key']]++;
 						//Если выполнено по объекту столько же сколько всего обработчиков
-						if (list['readyobj'][fire['objid']][handler['key']] === list['keys'][handler['key']]) {
+						if (list['readyobj'][fire['objid']][handler['key']] === list['keys'][handler['key']].length) {
 							list['readykeys'][fire['objid']].push(handler['key']);
 						}
 					}
 				}
+				
 
 				handler['executed'][fire['objid']] = true;
 				var moment = {fire:fire,handler:handler,parent:this.moment,list:list, i:i};
@@ -274,8 +267,17 @@
 
 			}
 			if (omit) {
-				console.log(omit);
-				throw 'Рекурсивная зависимость подписчиков. '+omit['keys'].join(',');
+				window.omit=omit;
+				console.error(omit);
+				console.log('Событие', fire['name']);
+				console.log('Идентификатор объекта', fire['objid'], fire['obj']);
+				console.log('Подписчиков', fire.list['list'].length, fire.list['list']);
+				console.log('Выполненное количество ключей у объекта. Почти выполненный ключи подписчиков', list['readyobj'][fire['objid']]);
+				console.log('Нужное к выполнению количество ключей у объекта', list['keys']);
+
+				console.log('Уже полностью выполненные ключи в нужном колчичестве', list['readykeys'][fire['objid']]);
+
+				throw 'Event: рекурсивная зависимость подписчиков. '+omit['keys'].join(',')+' зависит от '+omit.handler['key']+ ' и наоборот. window.omit.handler.list.keys';
 			}
 		}
 	}
