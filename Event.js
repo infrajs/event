@@ -21,6 +21,7 @@
 			var list=this.list;
 			if (!list[name]) {
 				list[name] = {
+					'data':{}, //Массив с данными по объектам
 					'result':{}, //Выполнено событие или нет
 					'list':[], //Очередь
 					'keys':{}, //Ключи всех подписок с количеством
@@ -33,10 +34,8 @@
 		createFire: function (name, obj) 
 		{
 			var fire=this.createContext(name, obj);
-			if(typeof(fire.objid)=='undefined'){
-				console.log(fire);
-				throw 'wtf';
-			}
+			fire.data=fire.list['data'][fire['objid']];
+			fire.data.fire=fire; //У data fire Один
 			return fire;
 		},
 		createHandler: function (name, callback, key, obj) 
@@ -92,7 +91,7 @@
 				'objid': objid,
 				'list':list
 			};
-			
+			if (!list['data'][context['objid']]) list['data'][context['objid']]={};
 			return context;
 		},
 		is: function(r){
@@ -121,16 +120,20 @@
 		{
 
 			var handler = this.createHandler(name, callback, key, obj);
+			Event.keystik(handler);
 
 			if (obj) { 
 				if (handler.list['result'][handler['objid']]) {
 					//Метка result появляется когда очередь уже выполнена иначе событие выполнится в общем порядке
 					//Подписка на совершённое событие 
+					
 					callback(obj); //Подписка на конкретный объект
 				}
 			} else { //Подписка на все объекты
-				for (var i in handler.list['result']) { //срабатывает для уже обработанных объектов
-					callback(handler.list['result'][i]['obj']);
+				for (var objid in handler.list['result']) { //срабатывает для уже обработанных объектов
+					if (!handler.list['result'][objid]) continue; //Для прерванных false результатов не запускаем
+					var fire=handler.list['data'][objid]['fire'];
+					callback(fire['obj']);
 				}
 			}
 		},
@@ -155,6 +158,7 @@
 					var handler=list['list'][i];
 					handler['executed']={};
 				}
+				list['data']={};
 				list['result']={}; //Выполнено событие или нет
 				list['readyobj']={};//Массив с временными отметками по объектам что выполнено. При равенстве количество с keys. Ключ попадает в массив ready
 				list['readykeys']={}; //Выполненные ключи
@@ -179,33 +183,39 @@
 
 			var fire = this.createFire(name, obj);
 			var list=fire.list;
-
+			var data=fire.data;
 			/**
 			 * TODO: Реализация is isshow... нужно сбрасывать события
 			 **/
 			if (typeof(list['result'][fire['objid']]) != 'undefined') return list['result'][fire['objid']];
-			list['result'][fire['objid']] = true; //Защита от рекурсий вложенный вызов вернёт true
+			if (data.executed === false) return true; //Защита от рекурсий вложенный вызов вернёт true
+			data.executed=false;
+			
+			
 
 			if (!list['readykeys'][fire['objid']]) list['readykeys'][fire['objid']]=[];
 			if (!list['readyobj'][fire['objid']]) list['readyobj'][fire['objid']]={};
 			
 			
 			// TODO: проверить обработку несуществующих ключей
-
 			for (var i = 0, l = list['list'].length;  i < l; i++) { //Подписка на ходу
 				handler = list['list'][i];
-				handler['keystik']=handler['keys'].filter(function(n) { //Из условия подписчика убраны несуществующие ключи
-					if (!list['keys'][n]) return false;
-					if (!list['keys'][n].length) return false;
-					return true;
-				});
+				Event.keystik(handler);
 			}
 
 			var r = this.execute(fire, list);
 			if (this.is(r)) r = true;
 			else r = false;
 			list['result'][fire['objid']] = r;
+			data.executed=true;
 			return list['result'][fire['objid']];
+		},
+		keystik: function(handler){
+			handler['keystik']=handler['keys'].filter(function(n) { //Из условия подписчика убраны несуществующие ключи
+				if (!handler.list['keys'][n]) return false;
+				if (!handler.list['keys'][n].length) return false;
+				return true;
+			});
 		},
 		execute: function(fire, list)
 		{
