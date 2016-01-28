@@ -6,7 +6,9 @@ Event::handler('onshow', function(){
 	echo 'onshow';
 });
 Event::fire('onshow');
+```
 
+```php
 Event::handler('print', function(){
 	echo 'World';
 }, ':somekey');
@@ -31,4 +33,7 @@ Event.fire('print');
 
 # Infrajs
 
-Обращение к Event собирает конфиг (.infra.json) всех установленных модулей. Это нужно чтобы были собраны все подписки. Если event указан в зависимостях dependencies .infra.json расширения X. Расширение X также будет иницилизировать конфиги всех установленных расширений. 
+При генерации событий Event все [конфиги](https://github.com/infrajs/config) установленных или необходимых модулей должны быть обработаны. Чтобы были собраны все подписки.
+```php
+	\infrajs\config\Config::get();
+``` 
