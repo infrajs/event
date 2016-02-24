@@ -70,7 +70,7 @@ class Event {
 		);
 		return $handler;
 	}
-	public static function handler($name, $callback, $key=null, &$obj=null)
+	public static function handler($name, $callback, $key = null, &$obj = null)
 	{
 
 		$handler = static::createContext($name, $obj, $key);
@@ -96,7 +96,14 @@ class Event {
 			throw new \Exception('Подписка на совершённое событие');
 		}
 	}
-	
+	public static function one($name, $callback, $key = null, &$obj = null) {
+		$ready = false;
+		static::handler($name, function () use (&$ready){
+			if ($ready) return;
+			$ready = true;
+			return $callback();
+		}, $key, $obj);
+	}
 	
 	/**
 	 * Одно событие для одного объекта генерируется один раз
