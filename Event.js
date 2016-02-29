@@ -1,11 +1,7 @@
 ( function () {
 	window.Event = {
 		list:{},
-		classes:{
-			'alien': function (obj) {
-				return '';
-			}
-		},
+		classes:{},
 		explode: function (separator, str, limit)
 		{
 		    var arr = str.split(separator);
@@ -149,7 +145,7 @@
 			 **/
 			if (!name) {
 				for (name in this.list) {
-					this.tik(name);
+					this.tik(name, clear);
 				}
 				return;
 			}
@@ -248,9 +244,7 @@
 					};
 					continue; //Найден неудовлетворённый ключ.. может быть выход из цикла и на ислкючение
 				}
-				//if(fire['objid']==4 && fire['name']=='layer.isshow') {
-				//	console.log(handler);
-				//}
+				
 				if (!list['readyobj'][fire['objid']][handler['key']]) list['readyobj'][fire['objid']][handler['key']] = 0;
 				list['readyobj'][fire['objid']][handler['key']]++;
 

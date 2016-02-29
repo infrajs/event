@@ -2,161 +2,225 @@
 namespace infrajs\event;
 use infrajs\once\Once;
 use infrajs\event\Event;
-/**
- * 1. Добавляются обработчики Event::handler('question.otherkey.otherkey', $handler, 'selfkey') обработчик запустится с 1 аргументом, проанализировав который обработчик должен сказать null или вернуть значение.
- * 2. Во втором этапе вызывается Event::handler('question', $obj) и начинают запускаться обработчики. Первый вернувший false ответ остановит очередь. Если обработчики ничего не вернуть is будет возвращать true.
- * При повторных вызовах возвращается кэш. Очердь одноразовая, простая, быстрая.
- * При подписки добавляются ключевые слова
- **/
 
 class Event {
-	private static $list;
-	public static $fire;
-	public static $handler;
+	public static $list = array();
 	public static $classes = array();
-	public static $conf = array();
+	public static $moment = array();
 	private static function &getList($name) //У одного имени есть два списка. глобальное событие и события alien других объектов 
 	{
 		$list=&static::$list;
 		if (!isset($list[$name])) {
 			$list[$name] = array(
-				'result'=>array(), //Выполнено событие или нет
-				'list'=>[], //Очередь
-				'keys'=>array(), //Ключи всех подписок с количеством
-				'readyobj'=>array(),//Массив с временными отметками по объектам что выполнено. При равенстве количество с keys. Ключ попадает в массив ready
-				'ready'=>array() //Выполненные ключи
+				'data' => array(), //Массив с данными по объектам
+				'result' => array(), //Выполнено событие или нет
+				'list' => array(), //Очередь
+				'keys' => array(), //Ключи всех подписок с количеством
+				'readyobj' => array(),//Массив с временными отметками по объектам что выполнено. При равенстве количество с keys. Ключ попадает в массив ready
+				'readykeys' => array() //Выполненные ключи
 			);
 		}
 		return $list[$name];
 	}
+	public static function createFire($name, &$obj) 
+	{
+		$fire = Event::createContext($name, $obj);
+		$fire['data'] = $fire['list']['data'][$fire['objid']];
+		$fire['data']['fire'] = &$fire; //У data fire Один
+		return $fire;
+	}
+	public static function createHandler($name, $callback, $key, &$obj) 
+	{
+		$handler = Event::createContext($name, $obj, $key);
+		$handler['callback'] = $callback;
+		
+		$handler['list']['list'][] = $handler;
+
+		if ($handler['key']||$handler['key']=='0') {
+			if (empty($handler['list']['keys'][$handler['key']])) $handler['list']['keys'][$handler['key']] = array($handler);
+			else $handler['list']['keys'][$handler['key']][] = $handler; //Сосчитали все ключи
+		}
+		return $handler;
+	}
 	public static function createContext($name, &$obj, $key='')
 	{
+		
 		$p=explode(':', $key, 2);
 		$key=$p[0];
 		if (sizeof($p)==2) {
 			$keys = explode(',', $p[1]);
-			//$keys = array_map('trim', $keys);
 		} else {
 			$keys = array();
 		}
+
 		$p=explode('.', $name);
 		if (sizeof($p)>1) {
 			$class=$p[0];
 		} else {
-			if ($obj) {
-				$name='alien.'.$name;
-				$class='alien';
-			} else {
-				$class='';
-			}
+			$class='';
+			if ($obj) throw 'Для события с объектом класс обязателен';
 		}
-		if ($class) {
+		if ($class) { 
+			//одноимённый с классом ключ есть всегда. 
+			//Вроде того что у класса есть свои собственные обработчики котоорые должны сработать первыми.
+			//Если в качестве ключе указать название класса этот обработчик всегда будет первым
 			$keys[]=$class;
 		}
+
 		$classes=static::$classes;
-		if (isset($classes[$class])&&is_array($obj)) {
+		if ($obj) {
+			if(!$classes[$class]) {
+				throw new \Exception('Функция класса объекта '.$class.' не указанна в Event::$classes["'.$class.'"]');
+			}
 			$objid = $classes[$class]($obj);
 		} else {
 			$objid = '';
 		}
-		$handler=array(
-			'key' => trim($key),
+		
+		$list = &Event::getList($name);
+		$list['class'] = $class;
+		$context= array(
+			'key' => $key,
 			'executed' => array(),
-			'name' => $name,
-			'class' => $class,
-			'keys' => $keys,
-			'obj' => &$obj,
-			'objid' => $objid
+			'name'=> $name,
+			'class'=> $class,
+			'keys'=> $keys,
+			'obj'=> &$obj,
+			'objid'=> $objid,
+			'list'=> &$list
 		);
-		return $handler;
+		if (!$list['data'][$context['objid']]) $list['data'][$context['objid']]=array();
+		return $context;
 	}
-	public static function handler($name, $callback, $key = null, &$obj = null)
+	public static function is($r){
+		return is_null($r)? true : $r;
+	}
+	//wait when listen
+	public static function one($name, $callback, $key = '', &$obj = null)
 	{
-
-		$handler = static::createContext($name, $obj, $key);
-		$handler['callback'] = $callback;
-		$list=&static::getList($handler['name']);
-		$list['list'][] = $handler;
-
-		
-		if (!isset($list['keys'][$handler['key']])) {
-			$list['keys'][$handler['key']]=0;
-		}
-		$list['keys'][$handler['key']]++; //Сосчитали все ключи
-		
-		/**
-		 * Если все подписки имею ключи и нет ниодного выполненного ключа, то будет выполнена первая подписка в очереди.
-		 **/
-
-		if (isset($list['result'][$handler['objid']])) {
-			$conf=Event::$conf;
-			echo '<pre>';
-			print_r($handler);
-			print_r($list);
-			throw new \Exception('Подписка на совершённое событие');
-		}
-	}
-	public static function one($name, $callback, $key = null, &$obj = null) {
 		$ready = false;
-		static::handler($name, function () use (&$ready){
+		Event::handler($name, function () use (&$ready){
 			if ($ready) return;
 			$ready = true;
 			return $callback();
 		}, $key, $obj);
 	}
+	public static function onext($name, $callback, $key = '', &$obj = null)
+	{
+		$ready = false;
+		Event::createHandler($name, function () use (&$ready){
+			if ($ready) return;
+			$ready = true;
+			return $callback();
+		}, $key, $obj);
+	}
+
+	public static function handler($name, $callback, $key = null, &$obj = null)
+	{
+		$handler = static::createHandler($name, $callback, $key, $obj);
+		static::keystik($handler);
+		if ($obj) { 
+			if ($handler['list']['result'][$handler['objid']]) {
+				//Метка result появляется когда очередь уже выполнена иначе событие выполнится в общем порядке
+				//Подписка на совершённое событие 
+				$callback($obj); //Подписка на конкретный объект
+			}
+		} else { //Подписка на все объекты
+			foreach ($handler['list']['result'] as $objid) { //срабатывает для уже обработанных объектов
+				if (!$handler['list']['result'][$objid]) continue; //Для прерванных false результатов не запускаем
+				$fire = $handler['list']['data'][$objid]['fire'];
+				$callback($fire['obj']);
+			}
+		}
+	}
+	public static function clear($name) {
+		static::tik($name, true);
+	}
+	public static function tik($name, $clear = null)
+	{
+		/**
+		 * Режим повторения, сбросить что есть и начать заного.
+		 * Передаётся класс или имя
+		 * clear true - удалить и всех подписчиков
+		 **/
+		$lists = &Event::$list;
+		if (!$name) {
+			foreach ($lists as $name=>$v) {
+				Event::tik($name, $clear);
+			}
+			return;
+		}
+		if ($lists[$name]) {
+			$list = &$lists[$name];
+			for ($i = 0, $l = sizeof($list['list']); $i < $l; $i++) {
+				$list['list'][$i]['executed']=array();
+			}
+			$list['data'] = array();
+			$list['result'] = array(); //Выполнено событие или нет
+			$list['readyobj'] = array();//Массив с временными отметками по объектам что выполнено. При равенстве количество с keys. Ключ попадает в массив ready
+			$list['readykeys'] = array(); //Выполненные ключи
+			if ($clear) {
+				$list['keys'] = array();
+				$list['list'] = array();
+			}
+		} else {
+			foreach ($lists as $i => $v) {
+				if ($lists[$i]["class"] != $name) continue;
+				Event::tik($i, $clear);
+			}
+		}	
+	}
 	
-	/**
-	 * Одно событие для одного объекта генерируется один раз
-	 * fire('layer.onshow', $layer);
-	 **/
-	public static function fire($name, &$obj=null)
+	public static function fire($name, &$obj)
 	{
 		/**
 		 * Уникальность очереди событий определяется именем события содержащей имя класса события.
 		 * Все подписки хранятся в классе и объект не меняется
 		 **/
 
-
 		$fire = static::createContext($name, $obj);
-		$list = &Event::getList($fire['name']);
-
-		
-		
-		if (isset($list['result'][$fire['objid']])) {
-			return $list['result'][$fire['objid']];
-		}
-		if (!isset($list['ready'][$fire['objid']])) {
-			$list['ready'][$fire['objid']]=array();
-		}
-		if (isset($list['readyobj'][$fire['objid']])) {
-			$list['readyobj'][$fire['objid']]=array();
-		}
+		$list = &$fire['list'];
+		$data = &$fire['data'];
+		/**
+		 * TODO: Реализация is isshow... нужно сбрасывать события
+		 **/
+		if (!is_null($list['result'][$fire['objid']])) return $list['result'][$fire['objid']];
+		if ($data['executed'] === false) return true; //Защита от рекурсий вложенный вызов вернёт true
+		$data['executed'] = false;
 		
 
-		//Подписка в подписке
-		//$list['result'][$fire['objid']] = $fire;
-		//Генерация события в подписке
+		if (!$list['readykeys'][$fire['objid']]) $list['readykeys'][$fire['objid']] = array();
+		if (!$list['readyobj'][$fire['objid']]) $list['readyobj'][$fire['objid']] = array();
 		
+		
+		// TODO: проверить обработку несуществующих ключей
 		for ($i = 0, $l = sizeof($list['list']);  $i < $l; $i++) { //Подписка на ходу
-			$handler=&$list['list'][$i];
-			$handler['keys']=array_intersect($handler['keys'], array_keys($list['keys'])); //Убрали ключи которых вообще нет
+			Event::keystik($list['list'][$i]);
 		}
-		$r=Event::run($fire, $list);
-		if (is_null($r) || $r) $r = true;
+		$r = Event::execute($fire, $list);
+		if (Event::is($r)) $r = true;
 		else $r = false;
-
 		$list['result'][$fire['objid']] = $r;
-
+		$data['executed'] = true;
 		return $list['result'][$fire['objid']];
-		
 	}
-	private static function run(&$fire, &$list)
+	private static function keystik(&$handler){
+		$handler['keystik'] = array_filter($handler['keys'], function ($n) use (&$handler) { //Из условия подписчика убраны несуществующие ключи
+			if (!$handler['list']['keys'][$n]) return false;
+			if (!sizeof($handler['list']['keys'][$n])) return false;
+			return true;
+		});
+	}
+	private static function hv($val){
+		if (is_numeric($val)||(is_string($val)&&$val!=='')) return true;
+		return false;
+	}
+	private static function execute($fire, &$list)
 	{
 		$omit = false;
 
 		for ($i = 0; $i < sizeof($list['list']); $i++) { //Подписка на ходу
 			$handler=&$list['list'][$i];
-
 			if (!empty($handler['executed'][$fire['objid']])) continue;
 			
 			if(!is_null($handler['obj']) && $handler['objid']!==$fire['objid'] ) {
@@ -166,41 +230,57 @@ class Event {
 				//fire с объктом, подписка без объекта
 				//подписка должна выполниться для всех объектов fire. Проходим дальше
 			}
-
-			$iskeys = array_diff($handler['keys'], $list['ready'][$fire['objid']]); //Проверили выполнены ли все существующие ключи
 			
+			$iskeys = array_diff($handler['keystik'], $list['readykeys'][$fire['objid']]); //Проверили выполнены ли все существующие ключи
+
 			if (sizeof($iskeys) && (sizeof($iskeys)!=1 || is_null($handler['key']) || !in_array($handler['key'], $handler['keys']))) {
-				$omit=array('keys'=>$iskeys,'handler'=>$handler);
+				$omit=array(
+						'keys'=>$iskeys,
+						'handler'=>$handler, 
+						'fire'=> $fire
+				);
+
 				continue; //Найден неудовлетворённый ключ.. может быть выход из цикла и на ислкючение
 			}
+			
 
-			if(!is_null($handler['key'])) {
-				//Если есть ключ и его ещё не было
-				if(!in_array($handler['key'], $list['ready'][$fire['objid']])) {
-					if(!isset($list['readyobj'][$fire['objid']][$handler['key']])){
-						$list['readyobj'][$fire['objid']][$handler['key']] = 0;
-					}
-					$list['readyobj'][$fire['objid']][$handler['key']]++;
+			
+			if (!$list['readyobj'][$fire['objid']][$handler['key']]) $list['readyobj'][$fire['objid']][$handler['key']] = 0;
+			$list['readyobj'][$fire['objid']][$handler['key']]++;
+			
+			
+
+			if (static::hv($handler['key'])) {//Если есть ключ
+				if (!in_array($handler['key'], $list['readykeys'][$fire['objid']])) { //И этого ключа ещё не было
 					//Если выполнено по объекту столько же сколько всего обработчиков
-					if($list['readyobj'][$fire['objid']][$handler['key']]===$list['keys'][$handler['key']]) {
-						$list['ready'][$fire['objid']][]=$handler['key'];
+					if ($list['readyobj'][$fire['objid']][$handler['key']] === sizeof($list['keys'][$handler['key']])) {
+						$list['readykeys'][$fire['objid']][]=$handler['key'];
 					}
 				}
 			}
+			
 
 			$handler['executed'][$fire['objid']] = true;
-			Event::$fire = $fire;
-			Event::$handler = $handler;
-			$r = $handler['callback']($fire['obj']);
-			if (!is_null($r) && !$r) return $r;
+			$moment = array(
+				"fire" => $fire,
+				"handler" => $handler,
+				"parent" => static::$moment,
+				"list" => $list,
+				"i" => $i
+			);
+			static::$moment = $moment;
 
-			$r=Event::run($fire, $list);
+			
+			$r = $handler['callback']($fire['obj']);
+			static::$moment=$moment['parent'];
+
+			if (!static::is($r)) return $r;
+
+			$r = static::execute($fire, $list);
 			return $r;
 
 		}
 		if ($omit) {
-			$conf=Event::$conf;
-			
 			echo '<pre>';
 			unset($fire['obj']);
 			print_r($omit);
@@ -210,7 +290,3 @@ class Event {
 		}
 	}
 }
-
-Event::$classes['alien'] = function($obj){
-	return '';
-};

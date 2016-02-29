@@ -1,5 +1,5 @@
 {
-	"conf":"\\infrajs\\event\\Event",
 	"js":"Event.js",
-	"testerjs":"test.js"
+	"testerjs":"test.js",
+	"tester":"test.php"
 }
