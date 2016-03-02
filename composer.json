@@ -1,5 +1,6 @@
 {
 	"name": "infrajs/event",
+	"homepage":"https://github.com/infrajs/event",
 	"license": "GPL3",
 	"autoload": {
 		"psr-4": { "infrajs\\event\\": "/" }
