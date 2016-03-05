@@ -99,7 +99,7 @@ class Event {
 	public static function one($name, $callback, $key = '', &$obj = null)
 	{
 		$ready = false;
-		Event::handler($name, function () use (&$ready){
+		Event::handler($name, function () use (&$ready, $callback){
 			if ($ready) return;
 			$ready = true;
 			return $callback();
