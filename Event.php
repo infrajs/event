@@ -89,7 +89,7 @@ class Event {
 			'objid'=> $objid,
 			'list'=> &$list
 		);
-		if (!$list['data'][$context['objid']]) $list['data'][$context['objid']]=array();
+		if (empty($list['data'][$context['objid']])) $list['data'][$context['objid']]=array();
 		return $context;
 	}
 	public static function is($r){
@@ -206,7 +206,7 @@ class Event {
 	}
 	private static function keystik(&$handler){
 		$handler['keystik'] = array_filter($handler['keys'], function ($n) use (&$handler) { //Из условия подписчика убраны несуществующие ключи
-			if (!$handler['list']['keys'][$n]) return false;
+			if (empty($handler['list']['keys'][$n])) return false;
 			if (!sizeof($handler['list']['keys'][$n])) return false;
 			return true;
 		});
