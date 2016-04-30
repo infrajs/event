@@ -2,6 +2,7 @@
 namespace infrajs\event;
 use infrajs\once\Once;
 use infrajs\event\Event;
+use infrajs\each\Each;
 
 class Event {
 	public static $list = array();
@@ -25,7 +26,7 @@ class Event {
 	public static function createFire($name, &$obj) 
 	{
 		$fire = Event::createContext($name, $obj);
-		$fire['data'] = $fire['list']['data'][$fire['objid']];
+		$fire['data'] = &$fire['list']['data'][$fire['objid']];
 		$fire['data']['fire'] = &$fire; //У data fire Один
 		return $fire;
 	}
@@ -79,7 +80,7 @@ class Event {
 		
 		$list = &Event::getList($name);
 		$list['class'] = $class;
-		$context= array(
+		$context = array(
 			'key' => $key,
 			'executed' => array(),
 			'name'=> $name,
@@ -89,7 +90,8 @@ class Event {
 			'objid'=> $objid,
 			'list'=> &$list
 		);
-		if (empty($list['data'][$context['objid']])) $list['data'][$context['objid']]=array();
+
+		if (empty($list['data'][$context['objid']])) $list['data'][$context['objid']] = array();
 		return $context;
 	}
 	public static function is($r){
@@ -178,16 +180,18 @@ class Event {
 		 * Все подписки хранятся в классе и объект не меняется
 		 **/
 
-		$fire = static::createContext($name, $obj);
+		$fire = Event::createFire($name, $obj);
 		$list = &$fire['list'];
 		$data = &$fire['data'];
 		/**
 		 * TODO: Реализация is isshow... нужно сбрасывать события
 		 **/
-		if (!is_null($list['result'][$fire['objid']])) return $list['result'][$fire['objid']];
-		if ($data['executed'] === false) return true; //Защита от рекурсий вложенный вызов вернёт true
-		$data['executed'] = false;
 		
+		if (!is_null($list['result'][$fire['objid']])) return $list['result'][$fire['objid']];
+		
+		if ($data['executed'] === false) return true; //Защита от рекурсий вложенный вызов вернёт true
+
+		$data['executed'] = false;
 
 		if (!$list['readykeys'][$fire['objid']]) $list['readykeys'][$fire['objid']] = array();
 		if (!$list['readyobj'][$fire['objid']]) $list['readyobj'][$fire['objid']] = array();
