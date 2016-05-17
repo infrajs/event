@@ -59,7 +59,7 @@ class Event {
 			$class=$p[0];
 		} else {
 			$class='';
-			if ($obj) throw 'Для события с объектом класс обязателен';
+			if ($obj) throw new \Exception('Для события с объектом класс обязателен');
 		}
 		if ($class) { 
 			//одноимённый с классом ключ есть всегда. 
@@ -70,10 +70,11 @@ class Event {
 
 		$classes=static::$classes;
 		if ($obj) {
-			if(!$classes[$class]) {
-				throw new \Exception('Функция класса объекта '.$class.' не указанна в Event::$classes["'.$class.'"]');
+			if(empty($classes[$class])) {
+				throw new \Exception('Функция класса объекта '.$class.' не указанна пример Event::$classes["'.$class.'"] = function($obj) { return $obj["id"] }');
+			} else {
+				$objid = $classes[$class]($obj);
 			}
-			$objid = $classes[$class]($obj);
 		} else {
 			$objid = '';
 		}
@@ -119,26 +120,27 @@ class Event {
 
 	public static function handler($name, $callback, $key = null, &$obj = null)
 	{
-		$handler = static::createHandler($name, $callback, $key, $obj);
+		$handler = &static::createHandler($name, $callback, $key, $obj);
 		static::keystik($handler);
 		if ($obj) { 
-			if ($handler['list']['result'][$handler['objid']]) {
+			if (!empty($handler['list']['result'][$handler['objid']])) {
 				//Метка result появляется когда очередь уже выполнена иначе событие выполнится в общем порядке
 				//Подписка на совершённое событие 
-				$callback($obj); //Подписка на конкретный объект
+				$r = $callback($obj); //Подписка на конкретный объект
+				if (!Event::is($r)) $handler['list']['result'][$handler['objid']] = false;
 			}
 		} else { //Подписка на все объекты
-			foreach ($handler['list']['result'] as $objid) { //срабатывает для уже обработанных объектов
-				if (!$handler['list']['result'][$objid]) continue; //Для прерванных false результатов не запускаем
-				$fire = $handler['list']['data'][$objid]['fire'];
-				$callback($fire['obj']);
+			foreach ($handler['list']['result'] as $objid=>$k) { //срабатывает для уже обработанных объектов
+				if (empty($handler['list']['result'][$objid])) continue; //Для прерванных false результатов не запускаем
+				$r = $callback($handler['list']['data'][$objid]['fire']['obj']);
+				if (!Event::is($r)) $handler['list']['result'][$handler['objid']] = false;
 			}
 		}
 	}
 	public static function clear($name) {
 		static::tik($name, true);
 	}
-	public static function tik($name, $clear = null)
+	public static function tik($name = null, $clear = null)
 	{
 		/**
 		 * Режим повторения, сбросить что есть и начать заного.
@@ -155,7 +157,7 @@ class Event {
 		if ($lists[$name]) {
 			$list = &$lists[$name];
 			for ($i = 0, $l = sizeof($list['list']); $i < $l; $i++) {
-				$list['list'][$i]['executed']=array();
+				$list['list'][$i]['executed'] = array();
 			}
 			$list['data'] = array();
 			$list['result'] = array(); //Выполнено событие или нет
@@ -173,7 +175,7 @@ class Event {
 		}	
 	}
 	
-	public static function fire($name, &$obj)
+	public static function fire($name, &$obj = null)
 	{
 		/**
 		 * Уникальность очереди событий определяется именем события содержащей имя класса события.
@@ -181,20 +183,23 @@ class Event {
 		 **/
 
 		$fire = Event::createFire($name, $obj);
+		
 		$list = &$fire['list'];
 		$data = &$fire['data'];
+
+
 		/**
 		 * TODO: Реализация is isshow... нужно сбрасывать события
 		 **/
 		
-		if (!is_null($list['result'][$fire['objid']])) return $list['result'][$fire['objid']];
+		if (isset($list['result'][$fire['objid']]) && !is_null($list['result'][$fire['objid']])) return $list['result'][$fire['objid']];
 		
-		if ($data['executed'] === false) return true; //Защита от рекурсий вложенный вызов вернёт true
+		if (isset($data['executed']) && $data['executed'] === false) return true; //Защита от рекурсий вложенный вызов вернёт true
 
 		$data['executed'] = false;
 
-		if (!$list['readykeys'][$fire['objid']]) $list['readykeys'][$fire['objid']] = array();
-		if (!$list['readyobj'][$fire['objid']]) $list['readyobj'][$fire['objid']] = array();
+		if (!isset($list['readykeys'][$fire['objid']])) $list['readykeys'][$fire['objid']] = array();
+		if (!isset($list['readyobj'][$fire['objid']])) $list['readyobj'][$fire['objid']] = array();
 		
 		
 		// TODO: проверить обработку несуществующих ключей
@@ -249,7 +254,7 @@ class Event {
 			
 
 			
-			if (!$list['readyobj'][$fire['objid']][$handler['key']]) $list['readyobj'][$fire['objid']][$handler['key']] = 0;
+			if (empty($list['readyobj'][$fire['objid']][$handler['key']])) $list['readyobj'][$fire['objid']][$handler['key']] = 0;
 			$list['readyobj'][$fire['objid']][$handler['key']]++;
 			
 			

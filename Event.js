@@ -114,22 +114,22 @@
 		},
 		handler: function (name, callback, key, obj)
 		{
-
 			var handler = this.createHandler(name, callback, key, obj);
 			Event.keystik(handler);
 
 			if (obj) { 
 				if (handler.list['result'][handler['objid']]) {
 					//Метка result появляется когда очередь уже выполнена иначе событие выполнится в общем порядке
-					//Подписка на совершённое событие 
-					
-					callback(obj); //Подписка на конкретный объект
+					//Подписка на совершённое событие 	
+					var r = callback(obj); //Подписка на конкретный объект
+					if (!this.is(r)) handler.list['result'][objid] = false;
 				}
 			} else { //Подписка на все объекты
 				for (var objid in handler.list['result']) { //срабатывает для уже обработанных объектов
 					if (!handler.list['result'][objid]) continue; //Для прерванных false результатов не запускаем
 					var fire=handler.list['data'][objid]['fire'];
-					callback(fire['obj']);
+					var r = callback(fire['obj']);
+					if (!this.is(r)) handler.list['result'][objid] = false;
 				}
 			}
 		},

@@ -1,5 +1,5 @@
 {
 	"js":"Event.js",
-	"testerjs":"test.js",
-	"tester":"test.php"
+	"testerjs":"tester.js",
+	"tester":"tester.php"
 }

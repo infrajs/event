@@ -3,7 +3,7 @@ namespace infrajs\event;
 use infrajs\ans\Ans;
 
 if (!is_file('vendor/autoload.php')) {
-	chdir('../../../../');	
+	chdir('../../../');	
 	require_once('vendor/autoload.php');
 }
 $ans = array();
@@ -111,6 +111,41 @@ Event::fire('cls.event');
 Event::fire('cls.event', $obj2);
 
 if (implode('',$test)!=='1211') return Ans::err($ans, 'Некорректное выполнение '.implode('',$test));
+
+
+
+
+
+
+//Звонок в дверь
+Event::fire('Звонок в дверь');
+$res = null;
+Event::handler('Звонок в дверь', function () use (&$res) {
+	$res = true;
+	return false;
+},'Anton:Vika');
+Event::handler('Звонок в дверь', function () use (&$res) {
+	$res = false;
+	return false;
+},'Vika');
+if (!$res) return Ans::err($ans, 'Звонок в дверь не выполнен');
+
+
+
+//Звонок по телефону
+$res = null;
+Event::handler('Звонок по телефону', function () use (&$res) {
+	$res = false;
+	return false;
+},'Anton:Vika');
+Event::handler('Звонок по телефону', function () use (&$res) {
+	$res = true;
+	return false;
+},'Vika');
+Event::fire('Звонок по телефону');
+if (!$res) return Ans::err($ans, 'Звонок по телефону не выполнен');
+
+
 
 
 return Ans::ret($ans);
