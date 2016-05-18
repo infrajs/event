@@ -126,7 +126,6 @@
 		'Звонок по телефону',
 		function () {
 			res = null;
-			Event.fire('Звонок по телефону');
 			Event.handler('Звонок по телефону', function () {
 				res = false;
 				return false;
@@ -135,7 +134,7 @@
 				res = true;
 				return false;
 			}, 'Vika');
-			
+			Event.fire('Звонок по телефону');
 			test.check();
 		},
 		function () {
