@@ -1,30 +1,30 @@
 (function () {
-
-	Event.clear('test');
-	test=Tester;
 	var counter='';
-	test.tasks.push([
+
+	Tester.tasks.push([
 		'Очередь событий',
 		function () {
+			counter='';
+			Event.clear('test');
 			Event.handler('test.opa',function () {
 				counter+='2';
 			},'two:one');
 			Event.handler('test.opa',function () {
 				counter+='1';
 			},'one');
-			test.check();
+			Tester.check();
 		},
 		function () {
 			Event.fire('test.opa');
-			if (counter === '12') return test.ok();
-			if (counter === '21') return test.err('Порядок выполнения нарушен '+counter);
-			return test.err('Всё плохо '+counter);
+			if (counter === '12') return Tester.ok();
+			if (counter === '21') return Tester.err('Порядок выполнения нарушен '+counter);
+			return Tester.err('Всё плохо '+counter);
 		}
 	]);
 
 
 
-	test.tasks.push([
+	Tester.tasks.push([
 		'Взаимозависимость',
 		function () {
 			counter='';
@@ -47,31 +47,33 @@
 				counter+='6';
 			},'three');
 
-			test.check();
+			Tester.check();
 		},
 		function () {
 			Event.fire('test.one');
-			if (counter === '136524') return test.ok();
-			return test.err('Всё плохо '+counter);
+			if (counter === '136524') return Tester.ok();
+			return Tester.err('Всё плохо '+counter);
 		}
 	]);
-	test.tasks.push([
+
+	Tester.tasks.push([
 		'memories',
 		function () {
-			Event.handler('test.check',function () {
+			Event.handler('Tester.check',function () {
 				return false
 			});
-			test.check();
+			Tester.check();
 		},
 		function () {
-			var r = Event.fire('test.check');
-			if (r) return test.err("Event.fire('test.false') Должен был вернуть false. 1 раз.");
-			var r = Event.fire('test.check');
-			if (r) return test.err("Event.fire('test.false') Должен был вернуть false. 2 раз.");
-			return test.ok();
+			var r = Event.fire('Tester.check');
+			if (r) return Tester.err("Event.fire('test.false') Должен был вернуть false. 1 раз.");
+			var r = Event.fire('Tester.check');
+			if (r) return Tester.err("Event.fire('test.false') Должен был вернуть false. 2 раз.");
+			return Tester.ok();
 		}
 	]);
-	test.tasks.push([
+	
+	Tester.tasks.push([
 		'return false',
 		function () {
 			counter='';
@@ -85,80 +87,64 @@
 			Event.handler('test.false',function () {
 				counter+='3';
 			});
-			test.check();
+			Tester.check();
 		},
 		function () {
 			var r = Event.fire('test.false');
-			if (r) return test.err("Event.fire('test.false') Должен был вернуть false");
+			if (r) return Tester.err("Event.fire('test.false') Должен был вернуть false");
 			var r = Event.fire('test.false');
-			if (r) return test.err("Event.fire('test.false') Должен был вернуть false и во второй раз");
-			if (counter === '12') return test.ok();
-			return test.err('Всё плохо '+counter);
+			if (r) return Tester.err("Event.fire('test.false') Должен был вернуть false и во второй раз");
+			if (counter === '12') return Tester.ok();
+			return Tester.err('Всё плохо '+counter);
 		}
 	]);
 
 
 
-	test.tasks.push([
+	Tester.tasks.push([
 		'Звонок в дверь',
 		function () {
 			Event.fire('Звонок в дверь');
-			res = null;
+			counter = null;
 			Event.handler('Звонок в дверь', function () {
-				res = true;
+				counter = true;
 				return false;
 			}, 'Anton:Vika');
 			Event.handler('Звонок в дверь', function () {
-				res = false;
+				counter = false;
 				return false;
 			}, 'Vika');
 			
-			test.check();
+			Tester.check();
 		},
 		function () {
 			Event.clear('Звонок в дверь');
-			if (!res) return test.err('Звонок в дверь не выполнен');
-			return test.ok();
+			if (!counter) return Tester.err('Звонок в дверь не выполнен');
+			return Tester.ok();
 		}
 	]);
 
-	test.tasks.push([
+	Tester.tasks.push([
 		'Звонок по телефону',
 		function () {
-			res = null;
+			counter = null;
 			Event.handler('Звонок по телефону', function () {
-				res = false;
+				counter = false;
 				return false;
 			}, 'Anton:Vika');
 			Event.handler('Звонок по телефону', function () {
-				res = true;
+				counter = true;
 				return false;
 			}, 'Vika');
 			Event.fire('Звонок по телефону');
-			test.check();
+			Tester.check();
 		},
 		function () {
 			Event.clear('Звонок по телефону');
-			if (!res) return test.err('Звонок по телефону не выполнен');
-			return test.ok();
+			if (!counter) return Tester.err('Звонок по телефону не выполнен');
+			return Tester.ok();
 		}
 	]);
 
-//
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	test.exec();
+	Tester.exec();
 })();

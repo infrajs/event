@@ -1,5 +1,6 @@
 {
 	"js":"Event.js",
+	"dependencies":"once",
 	"testerjs":"tester.js",
 	"tester":"tester.php"
 }
