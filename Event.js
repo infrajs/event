@@ -76,6 +76,10 @@
 				cls = 'Infrajs';
 				p[0] = cls;
 				name = p.join('.');
+			} else if (cls == 'Layer') {
+				cls = 'layer';
+				p[0] = cls;
+				name = p.join('.');
 			}
 
 			var classes = this.classes;

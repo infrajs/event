@@ -1,5 +1,30 @@
 (function () {
 	var counter='';
+	
+	Tester.tasks.push([
+		'Событие для объекта',
+		function () {
+			var obj1 = {id:1};
+			var obj2 = {id:2};
+			Event.classes['Класс'] = function (obj) {
+				return obj.id;
+			}
+			counter = 0;
+			Event.handler('Класс.событие', function () {
+				counter++;
+			}, '', obj1);
+
+			Event.fire('Класс.событие', obj1);
+			Event.fire('Класс.событие', obj2);
+			
+			Tester.check();
+		},
+		function () {
+			Event.clear('Класс.событие');
+			if (counter != 1) return Tester.err('Событие для объекта сработало раз '+counter);
+			return Tester.ok();
+		}
+	]);
 
 	Tester.tasks.push([
 		'Очередь событий',
@@ -107,7 +132,7 @@
 			Event.fire('Звонок в дверь');
 			counter = null;
 			Event.handler('Звонок в дверь', function () {
-				counter = true;
+				counter = true; //Выполняется в последнюю очередь
 				return false;
 			}, 'Anton:Vika');
 			Event.handler('Звонок в дверь', function () {
@@ -133,7 +158,7 @@
 				return false;
 			}, 'Anton:Vika');
 			Event.handler('Звонок по телефону', function () {
-				counter = true;
+				counter = true; //Больше ничего не выполняется
 				return false;
 			}, 'Vika');
 			Event.fire('Звонок по телефону');
