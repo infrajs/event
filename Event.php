@@ -67,7 +67,15 @@ class Event {
 			//Если в качестве ключе указать название класса этот обработчик всегда будет первым
 			$keys[]=$class;
 		}
-
+		if ($class == 'Controller') {
+			$class = 'Infrajs';
+			$p[0] = $class;
+			$name = implode('.',$p);
+		} else if ($class == 'Layer') {
+			$class = 'layer';
+			$p[0] = $class;
+			$name = implode('.',$p);
+		}
 		$classes=static::$classes;
 		if ($obj) {
 			if(empty($classes[$class])) {
