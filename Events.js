@@ -1,5 +1,5 @@
 ( function () {
-	window.Event = {
+	window.Events = {
 		list:{},
 		classes:{},
 		explode: function (separator, str, limit)
@@ -124,7 +124,7 @@
 		handler: function (name, callback, key, obj)
 		{
 			var handler = this.createHandler(name, callback, key, obj);
-			Event.keystik(handler);
+			Events.keystik(handler);
 
 			if (obj) { 
 				if (handler.list['result'][handler['objid']]) {
@@ -206,7 +206,7 @@
 			// TODO: проверить обработку несуществующих ключей
 			for (var i = 0, l = list['list'].length;  i < l; i++) { //Подписка на ходу
 				handler = list['list'][i];
-				Event.keystik(handler);
+				Events.keystik(handler);
 			}
 
 			var r = this.execute(fire, list);
@@ -291,8 +291,12 @@
 
 				console.log('Уже полностью выполненные ключи в нужном колчичестве', list['readykeys'][fire['objid']]);
 
-				throw 'Event: рекурсивная зависимость подписчиков. '+omit['keys'].join(',')+' зависит от '+omit.handler['key']+ ' и наоборот. window.omit.handler.list.keys';
+				throw 'Events: рекурсивная зависимость подписчиков. '+omit['keys'].join(',')+' зависит от '+omit.handler['key']+ ' и наоборот. window.omit.handler.list.keys';
 			}
 		}
+	}
+	if(!window.Event) window.Event = {};
+	for (var i in window.Events) {
+		window.Event[i] = window.Events[i];
 	}
 })();

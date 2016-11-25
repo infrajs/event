@@ -41,13 +41,14 @@ Event::fire('print');
 ```
 
 ```js
-Event.handler('print', function(){
+Есть нативный объект ```Event``` по этому в javascript нужно использовать ```Events```
+Events.handler('print', function(){
 	console.log('World');
 }, ':somekey');
-Event.handler('print', function(){
+Events.handler('print', function(){
 	console.log('Hello ');
 },'somekey');
-Event.fire('print');
+Events.fire('print');
 ```
 Наличие события c Hello не обязательно для того чтобы сработала подписка с World, но если такой handler есть, то World сработает вторым, после обработчика с клчём somekey.
 
