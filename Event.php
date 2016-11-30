@@ -128,7 +128,7 @@ class Event {
 
 	public static function handler($name, $callback, $key = null, &$obj = null)
 	{
-		$handler = &static::createHandler($name, $callback, $key, $obj);
+		$handler = static::createHandler($name, $callback, $key, $obj);
 		static::keystik($handler);
 		if ($obj) { 
 			if (!empty($handler['list']['result'][$handler['objid']])) {
@@ -162,7 +162,7 @@ class Event {
 			}
 			return;
 		}
-		if ($lists[$name]) {
+		if (!empty($lists[$name])) {
 			$list = &$lists[$name];
 			for ($i = 0, $l = sizeof($list['list']); $i < $l; $i++) {
 				$list['list'][$i]['executed'] = array();
@@ -247,7 +247,7 @@ class Event {
 				//fire с объктом, подписка без объекта
 				//подписка должна выполниться для всех объектов fire. Проходим дальше
 			}
-			
+			if (empty($handler['keystik'])) Event::keystik($handler);
 			$iskeys = array_diff($handler['keystik'], $list['readykeys'][$fire['objid']]); //Проверили выполнены ли все существующие ключи
 
 			if (sizeof($iskeys) && (sizeof($iskeys)!=1 || is_null($handler['key']) || !in_array($handler['key'], $handler['keys']))) {
