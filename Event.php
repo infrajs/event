@@ -110,19 +110,19 @@ class Event {
 	public static function one($name, $callback, $key = '', &$obj = null)
 	{
 		$ready = false;
-		Event::handler($name, function () use (&$ready, $callback){
+		Event::handler($name, function (&$obj) use (&$ready, $callback){
 			if ($ready) return;
 			$ready = true;
-			return $callback();
+			return $callback($obj);
 		}, $key, $obj);
 	}
 	public static function onext($name, $callback, $key = '', &$obj = null)
 	{
 		$ready = false;
-		Event::createHandler($name, function () use (&$ready){
+		Event::createHandler($name, function (&$obj) use (&$ready){
 			if ($ready) return;
 			$ready = true;
-			return $callback();
+			return $callback($obj);
 		}, $key, $obj);
 	}
 
