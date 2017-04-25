@@ -67,7 +67,7 @@ class Event {
 			//Если в качестве ключе указать название класса этот обработчик всегда будет первым
 			$keys[]=$class;
 		}
-		if ($class == 'Controller') {
+		/*if ($class == 'Controller') {
 			$class = 'Infrajs';
 			$p[0] = $class;
 			$name = implode('.',$p);
@@ -75,8 +75,8 @@ class Event {
 			$class = 'layer';
 			$p[0] = $class;
 			$name = implode('.',$p);
-		}
-		$classes=static::$classes;
+		}*/
+		$classes = static::$classes;
 		if ($obj) {
 			if(empty($classes[$class])) {
 				throw new \Exception('Функция класса объекта '.$class.' не указанна пример Event::$classes["'.$class.'"] = function($obj) { return $obj["id"] }');
