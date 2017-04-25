@@ -72,7 +72,7 @@
 				//Если в качестве ключе указать название класса этот обработчик всегда будет первым
 				keys.push(cls);
 			}
-			if (cls == 'Controller') {
+			/*if (cls == 'Controller') {
 				cls = 'Infrajs';
 				p[0] = cls;
 				name = p.join('.');
@@ -80,7 +80,7 @@
 				cls = 'layer';
 				p[0] = cls;
 				name = p.join('.');
-			}
+			}*/
 
 			var classes = this.classes;
 			var objid = obj ? classes[cls](obj) : '';
