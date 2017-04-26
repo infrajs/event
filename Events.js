@@ -1,3 +1,4 @@
+if(!window.infra) infra = {};
 ( function () {
 	window.Events = {
 		list:{},
