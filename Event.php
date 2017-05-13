@@ -79,6 +79,8 @@ class Event {
 		$classes = static::$classes;
 		if ($obj) {
 			if(empty($classes[$class])) {
+				echo '<pre>';
+				debug_print_backtrace();
 				throw new \Exception('Функция класса объекта '.$class.' не указанна пример Event::$classes["'.$class.'"] = function($obj) { return $obj["id"] }');
 			} else {
 				$objid = $classes[$class]($obj);
