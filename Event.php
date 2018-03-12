@@ -2,7 +2,7 @@
 namespace infrajs\event;
 use infrajs\event\Event;
 use infrajs\each\Each;
-use akiyatkin\boo\Once;
+use infrajs\once\Once;
 
 class Event {
 	public static $list = array();
