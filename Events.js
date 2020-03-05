@@ -206,7 +206,7 @@ if(!window.infra) infra = {};
 			
 			// TODO: проверить обработку несуществующих ключей
 			for (var i = 0, l = list['list'].length;  i < l; i++) { //Подписка на ходу
-				handler = list['list'][i];
+				var handler = list['list'][i];
 				Events.keystik(handler);
 			}
 
