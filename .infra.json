@@ -1,5 +1,4 @@
 {
-	"js":[],
 	"dependencies":"once",
 	"testerjs":"tester.js",
 	"tester":"tester.php"

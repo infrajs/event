@@ -1,3 +1,4 @@
+import { Event } from '/vendor/infrajs/event/Event.js'
 (function () {
 	var counter='';
 	

@@ -294,5 +294,4 @@ let Event = {
 		}
 	}
 }
-window.Event = Event
 export {Event}
