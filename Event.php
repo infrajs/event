@@ -2,7 +2,6 @@
 namespace infrajs\event;
 use infrajs\event\Event;
 use infrajs\each\Each;
-use infrajs\once\Once;
 
 class Event {
 	public static $list = array();
@@ -26,7 +25,7 @@ class Event {
 	public static function createFire($name, &$obj) 
 	{
 		$fire = Event::createContext($name, $obj);
-		$fire['itemparents'] = Once::$parents;
+		//$fire['itemparents'] = Once::$parents;
 		$fire['data'] = &$fire['list']['data'][$fire['objid']];
 		$fire['data']['fire'] = &$fire; //У data fire Один
 		return $fire;
@@ -137,19 +136,25 @@ class Event {
 			if (!empty($handler['list']['result'][$handler['objid']])) {
 				//Метка result появляется когда очередь уже выполнена иначе событие выполнится в общем порядке
 				//Подписка на совершённое событие 
-				$r = Once::resume($handler['list']['data'][$handler['objid']]['fire']['itemparents'], function () use (&$callback, &$obj) { 
-					return $callback($obj); //Подписка на конкретный объект
-				});			
-				//$r = $callback($obj); //Подписка на конкретный объект
+
+				// $r = Once::resume($handler['list']['data'][$handler['objid']]['fire']['itemparents'], function () use (&$callback, &$obj) { 
+				// 	return $callback($obj); //Подписка на конкретный объект
+				// });			
+
+				$r = $callback($obj); //Подписка на конкретный объект
+
 				if (!Event::is($r)) $handler['list']['result'][$handler['objid']] = false;
 			}
 		} else { //Подписка на все объекты
 			foreach ($handler['list']['result'] as $objid=>$k) { //срабатывает для уже обработанных объектов
 				if (empty($handler['list']['result'][$objid])) continue; //Для прерванных false результатов не запускаем
-				$r = Once::resume($handler['list']['data'][$objid]['fire']['itemparents'], function () use (&$callback, &$handler, $objid) { 
-					return $callback($handler['list']['data'][$objid]['fire']['obj']); //Подписка на конкретный объект
-				});
-				//$r = $callback($handler['list']['data'][$objid]['fire']['obj']);
+
+				// $r = Once::resume($handler['list']['data'][$objid]['fire']['itemparents'], function () use (&$callback, &$handler, $objid) { 
+				// 	return $callback($handler['list']['data'][$objid]['fire']['obj']); //Подписка на конкретный объект
+				// });
+
+				$r = $callback($handler['list']['data'][$objid]['fire']['obj']);
+
 				if (!Event::is($r)) $handler['list']['result'][$handler['objid']] = false;
 			}
 		}
